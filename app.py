@@ -1,55 +1,59 @@
 import streamlit as st
 from agent_logic import SupplyChainAgent
 
-# Page Config
+# 1. Page Configuration
 st.set_page_config(page_title="SAP Code Unnati | Agentic AI", layout="wide")
 
 st.title("🇮🇳 Autonomous Indian Logistics Rerouter")
-st.markdown("---")
+st.markdown("### Agentic AI & Dynamic Programming Optimization")
 
-# Initialize Agent
+# 2. Initialize Agent in Session State (Critical for Performance)
 if 'agent' not in st.session_state:
-    with st.spinner("Initializing Agentic Logic..."):
+    with st.spinner("Loading Delhivery Logistics Data..."):
         st.session_state.agent = SupplyChainAgent()
 
 agent = st.session_state.agent
 
-# Check if data loaded
-if agent.df.empty:
-    st.error("Missing 'delhivery_small.csv' on GitHub! Please upload the file to start.")
-else:
-    # Sidebar for Inputs
-    st.sidebar.header("Control Panel")
-    report = st.sidebar.text_area("Live Incident Report:", "Heavy rains near Anand_VUNagar_DC")
-    run_btn = st.sidebar.button("Run Agentic Simulation")
+# 3. Sidebar Inputs
+st.sidebar.header("Logistics Control Center")
+report = st.sidebar.text_area("Incident Report:", "Heavy rain near Anand_VUNagar_DC")
+run_btn = st.sidebar.button("Execute Agentic Reasoning")
 
-    # Main Dashboard Area
-    col1, col2 = st.columns([1, 1])
+# 4. Main Dashboard
+if run_btn:
+    with st.spinner("Agent is analyzing report and recalculating weights..."):
+        res = agent.process_incident(report)
+    
+    if res["status"] == "ERROR":
+        st.error(f"⚠️ {res['reasoning']}")
+    else:
+        # Layout Columns
+        col1, col2 = st.columns([1, 1])
 
-    if run_btn:
-        with st.spinner("Agent is reasoning..."):
-            res = agent.process_incident(report)
-        
         with col1:
-            st.subheader("🤖 Agentic Reasoning")
+            st.subheader("🤖 AI Reasoning Engine")
             if res["status"] == "REROUTED":
-                st.warning(f"**Status:** {res['status']}")
+                st.warning("🚨 REROUTE TRIGGERED")
             else:
-                st.success(f"**Status:** {res['status']}")
-            st.write(f"*Reasoning:* {res['reasoning']}")
+                st.success("✅ OPTIMAL PATH SECURE")
             
-            st.subheader("🛣️ Optimized Path")
+            st.info(f"**Agent Reasoning:** {res['reasoning']}")
+            
+            st.subheader("🛣️ Final Computed Path")
             st.code(" ➔ ".join(res["path"]))
 
         with col2:
-            st.subheader("📊 Route Metrics")
-            st.metric("Total Distance (KM)", f"{res['cost']} km")
-            st.metric("Origin", res["start"])
-            st.metric("Destination", res["end"])
+            st.subheader("📊 Route Analytics")
+            st.metric("Total Distance", f"{res['cost']} KM")
+            st.metric("Source Hub", res["start"])
+            st.metric("Destination Hub", res["end"])
 
-    # Show raw data section (Plan A)
-    st.markdown("---")
-    with st.expander("View Real-Time Master Data (Delhivery Sample)"):
-        st.dataframe(agent.df[['source_name', 'destination_name', 'osrm_distance', 'osrm_time']].head(20))
+# 5. Data Preview (Plan A)
+st.markdown("---")
+with st.expander("View Active Logistics Segments (Delhivery Data)"):
+    if not agent.df.empty:
+        st.dataframe(agent.df[['source_name', 'destination_name', 'osrm_distance', 'osrm_time']].head(10))
+    else:
+        st.write("No data available. Please upload 'delhivery_small.csv' to GitHub.")
 
-st.caption("Developed for SAP Code Unnati 2.0 | Agentic AI & DP Optimization")
+st.caption("SAP Code Unnati 2.0 | Agentic Supply Chain Optimization Project")
