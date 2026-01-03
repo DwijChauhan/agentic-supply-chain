@@ -1,16 +1,17 @@
 import heapq
 
 def get_optimal_route(graph, start, end):
+    # If the start city isn't in our source list, we can't begin
     if start not in graph:
-        return 0, [start, "Source not in data"]
+        return 0, [start, "Source Not Found"]
 
-    # Initialize distances for all nodes in the graph AND their neighbors
-    distances = {}
-    for node in graph:
-        distances[node] = float('infinity')
-        for neighbor in graph[node]:
-            distances[neighbor] = float('infinity')
-            
+    # Initialize distances for EVERY node mentioned in the graph (source or dest)
+    distances = {node: float('inf') for node in graph}
+    for nodes in graph.values():
+        for neighbor in nodes:
+            if neighbor not in distances:
+                distances[neighbor] = float('inf')
+    
     distances[start] = 0
     pq = [(0, start, [start])]
 
@@ -23,16 +24,10 @@ def get_optimal_route(graph, start, end):
         if current_distance > distances.get(current_node, float('inf')):
             continue
 
-        if current_node in graph:
-            for neighbor, weight in graph[current_node].items():
-                distance = current_distance + weight
-                
-                # SAFE CHECK: Ensure neighbor exists in distances
-                if neighbor not in distances:
-                    distances[neighbor] = float('infinity')
-                
-                if distance < distances[neighbor]:
-                    distances[neighbor] = distance
-                    heapq.heappush(pq, (distance, neighbor, path + [neighbor]))
+        for neighbor, weight in graph.get(current_node, {}).items():
+            distance = current_distance + weight
+            if distance < distances.get(neighbor, float('inf')):
+                distances[neighbor] = distance
+                heapq.heappush(pq, (distance, neighbor, path + [neighbor]))
 
-    return 0, [start, "No path found"]
+    return 0, [start, "No Connected Path Found"]
