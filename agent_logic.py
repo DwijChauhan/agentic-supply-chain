@@ -39,51 +39,31 @@ class SupplyChainAgent:
         return graph
 
 def process_incident(self, report):
-        try:
-            if not self.network:
-                return {"status": "ERROR", "reasoning": "Database is empty."}
+        if not self.network:
+            return {"status": "ERROR", "path": ["No Data"], "cost": 0, "start": "N/A", "end": "N/A", "reasoning": "CSV not loaded."}
 
-            temp_network = self.network.copy()
-            status = "NORMAL"
-            reasoning = "All hubs operating normally."
+        temp_network = self.network.copy()
+        status = "NORMAL"
+        reasoning = "All Indian hubs operating normally."
+        
+        # Keyword reasoning
+        if any(word in report.lower() for word in ["storm", "rain", "block", "delay"]):
+            status = "REROUTED"
+            reasoning = "Incident detected. Agent applying penalty weights."
+            for src in temp_network:
+                for dest in list(temp_network[src].keys()):
+                    if any(word.lower() in dest.lower() for word in report.split() if len(word) > 3):
+                        temp_network[src][dest] += 5000
 
-            # 1. Check for disruption keywords
-            keywords = ["storm", "blocked", "strike", "flood", "delay", "rain"]
-            if any(word in report.lower() for word in keywords):
-                status = "REROUTED"
-                reasoning = "Agent identified disruption. Recalculating..."
-                for src in temp_network:
-                    for dest in list(temp_network[src].keys()):
-                        # We check if the city name contains any word from the report
-                        if any(word.lower() in dest.lower() for word in report.split() if len(word) > 2):
-                            temp_network[src][dest] += 5000 # High penalty
-
-            # 2. Get Start and End nodes safely
-            all_cities = list(self.network.keys())
-            if len(all_cities) < 2:
-                raise ValueError("Not enough city nodes found in CSV.")
-
-            start_node = all_cities[0]
-            # Ensure the end node is actually reachable or connected in the data
-            end_node = list(self.network[start_node].keys())[0] if self.network[start_node] else all_cities[-1]
-
-            # 3. Trigger Optimizer
-            cost, path = get_optimal_route(temp_network, start_node, end_node)
+        # SAFE CITY SELECTION
+        cities = list(self.network.keys())
+        if len(cities) < 2:
+            return {"status": "ERROR", "path": ["Missing Cities"], "cost": 0, "start": "N/A", "end": "N/A", "reasoning": "Dataset too small."}
             
-            return {
-                "status": status, 
-                "path": path, 
-                "cost": round(cost, 2), 
-                "start": start_node, 
-                "end": end_node,
-                "reasoning": reasoning
-            }
-
-        except Exception as e:
-            # This captures the 'Error' you see and displays it safely
-            return {
-                "status": "ERROR", 
-                "reasoning": f"Logic Error: {str(e)}", 
-                "path": ["Error State"], 
-                "cost": 0, "start": "N/A", "end": "N/A"
-            }
+        start = cities[0]
+        # Pick an end city that is actually connected to the start city
+        possible_ends = list(self.network[start].keys())
+        end = possible_ends[0] if possible_ends else cities[-1]
+        
+        cost, path = get_optimal_route(temp_network, start, end)
+        return {"status": status, "path": path, "cost": round(cost, 2), "start": start, "end": end, "reasoning": reasoning}
