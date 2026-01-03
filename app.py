@@ -1,81 +1,58 @@
 import streamlit as st
 from agent_logic import SupplyChainAgent
 
-# 1. Page Configuration for a professional look
-st.set_page_config(
-    page_title="SAP Code Unnati | Agentic Logistics",
-    page_icon="🚚",
-    layout="wide"
-)
+# Page Config
+st.set_page_config(page_title="SAP Code Unnati | Agentic Logistics", layout="wide")
 
-# Custom Styling
 st.title("🇮🇳 Autonomous Indian Logistics Rerouter")
-st.markdown("### SAP Code Unnati 2.0: Agentic AI & Dynamic Programming Optimization")
-st.write("---")
+st.markdown("---")
 
-# 2. Initialize the Agent once and store it in the session
+# Initialize Agent
 if 'agent' not in st.session_state:
-    with st.spinner("Initializing Agent and Loading Delhivery Data..."):
+    with st.spinner("Initializing Agentic Logic..."):
         st.session_state.agent = SupplyChainAgent()
 
 agent = st.session_state.agent
 
-# 3. Sidebar for User Input
-st.sidebar.header("Agent Control Panel")
-st.sidebar.info("The Agent uses Perception-Reasoning-Action loops to manage disruptions.")
+if not agent.df.empty:
+    # Get unique list of all hubs for the dropdowns
+    all_hubs = sorted(list(set(agent.df['source_name'].unique()) | set(agent.df['destination_name'].unique())))
 
-report = st.sidebar.text_area(
-    "Live Incident Report:", 
-    placeholder="e.g., Heavy flooding reported near Anand_VUNagar_DC",
-    help="Enter any keywords like 'rain', 'storm', or 'blocked' along with a city name."
-)
-
-run_btn = st.sidebar.button("Run Agentic Simulation", type="primary")
-
-# 4. Main Dashboard Output
-if run_btn:
-    with st.spinner("Agent is reasoning and recalculating optimal paths..."):
-        # Trigger the Agentic Logic
-        res = agent.process_incident(report)
+    # Sidebar for Inputs
+    st.sidebar.header("Route Settings")
     
-    if res["status"] == "ERROR":
-        st.error(f"⚠️ {res['reasoning']}")
-    else:
-        # Create Two Columns for the 'Output Screen'
+    # NEW: Dropdowns to check distance between specific hubs
+    origin = st.sidebar.selectbox("Select Origin:", all_hubs, index=0)
+    destination = st.sidebar.selectbox("Select Destination:", all_hubs, index=min(1, len(all_hubs)-1))
+    
+    report = st.sidebar.text_area("Live Incident Report:", "Normal conditions")
+    run_btn = st.sidebar.button("Run Simulation")
+
+    if run_btn:
+        with st.spinner("Agent is reasoning..."):
+            # Pass selected cities to the agent
+            res = agent.process_incident(report, start_node=origin, end_node=destination)
+        
         col1, col2 = st.columns([1, 1])
 
         with col1:
             st.subheader("🤖 Agentic Reasoning")
             if res["status"] == "REROUTED":
-                st.warning(f"**Current Status:** {res['status']}")
+                st.warning(f"**Status:** {res['status']}")
             else:
-                st.success(f"**Current Status:** {res['status']}")
-            
-            st.write(f"**Reasoning:** {res['reasoning']}")
+                st.success(f"**Status:** {res['status']}")
+            st.write(f"*Reasoning:* {res['reasoning']}")
             
             st.subheader("🛣️ Optimized Path")
-            # Displays the path with arrows
-            path_display = " ➔ ".join(res["path"])
-            st.code(path_display, language="text")
+            st.code(" ➔ ".join(res["path"]))
 
         with col2:
-            st.subheader("📊 Route Analytics")
-            # Professional Metrics
-            m1, m2 = st.columns(2)
-            m1.metric("Total Distance", f"{res['cost']} KM")
-            m2.metric("Network Nodes", len(agent.network))
-            
-            st.write(f"**Starting Point:** {res['start']}")
-            st.write(f"**Destination:** {res['end']}")
+            st.subheader("📊 Route Metrics")
+            st.metric("Total Distance", f"{res['cost']} KM")
+            st.write(f"**From:** {res['start']}")
+            st.write(f"**To:** {res['end']}")
 
-# 5. Data Transparency (Plan A: Data Analytics)
-st.write("---")
-with st.expander("🔍 View Raw Delhivery Logistics Master Data"):
-    if not agent.df.empty:
-        st.write("Below is the sampled dataset used for the graph network:")
-        st.dataframe(agent.df[['source_name', 'destination_name', 'osrm_distance', 'osrm_time']].head(15))
-    else:
-        st.warning("No data found. Ensure 'delhivery_small.csv' is in your GitHub repository.")
-
-# Footer
-st.caption("Developed for SAP Code Unnati 2.0 | Agentic AI Supply Chain Project")
+    # Raw Data Preview
+    st.markdown("---")
+    with st.expander("View Master Data"):
+        st.dataframe(agent.df[['source_name', 'destination_name', 'osrm_distance']].head(10))
