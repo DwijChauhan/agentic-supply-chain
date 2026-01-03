@@ -30,38 +30,24 @@ class SupplyChainAgent:
             graph[src][dest] = weight
         return graph
 
-    def process_incident(self, report, start_node, end_node):
-        # 1. BASELINE: Calculate standard distance before any disruption
-        base_cost, _ = get_optimal_route(self.network, start_node, end_node)
+   def process_incident(self, report, start_node, end_node):
+        # ... (previous keyword reasoning code) ...
+
+        # Safety Check: If the selected start_node is not in our network, 
+        # the optimizer will fail. We must ensure it exists.
+        if start_node not in self.network:
+             return {"status": "ERROR", "reasoning": f"Node {start_node} not in network."}
+
+        # Trigger the hardened optimizer
+        cost, path = get_optimal_route(temp_network, start_node, end_node)
         
-        # 2. PERCEPTION: Calculate Risk Score
-        risk_score = 0
-        keywords = {"flood": 5, "storm": 4, "block": 5, "rain": 2, "delay": 1, "accident": 3}
-        for word, score in keywords.items():
-            if word in report.lower(): risk_score += score
-        risk_score = min(risk_score, 10)
-
-        # 3. REASONING: Apply penalties if risk is detected
-        temp_network = copy.deepcopy(self.network)
-        status = "NORMAL"
-        if risk_score > 0:
-            status = "REROUTED"
-            report_words = [w for w in report.lower().split() if len(w) > 3]
-            for src in temp_network:
-                for dest in list(temp_network[src].keys()):
-                    if any(w in dest.lower() or w in src.lower() for w in report_words):
-                        temp_network[src][dest] += 2000 # Penalty weight
-
-        # 4. ACTION: Get the new safe route
-        opt_cost, opt_path = get_optimal_route(temp_network, start_node, end_node)
-
         return {
             "base_cost": round(base_cost, 2),
-            "opt_cost": round(opt_cost, 2) if opt_cost < 1000 else round(base_cost, 2),
+            "opt_cost": round(cost, 2),
             "risk_level": risk_score,
-            "path": opt_path,
+            "path": path,
             "status": status,
             "start": start_node,
             "end": end_node,
-            "reasoning": f"Agent detected {risk_score}/10 risk factors. Rerouting initiated." if risk_score > 0 else "Routes verified safe."
+            "reasoning": reasoning
         }
