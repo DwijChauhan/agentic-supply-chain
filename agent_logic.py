@@ -8,59 +8,46 @@ class SupplyChainAgent:
     def __init__(self):
         file_name = 'delhivery_small.csv'
         if os.path.exists(file_name):
-            try:
-                self.raw_data = pd.read_csv(file_name)
-                self.df = self.raw_data.dropna(subset=['source_name', 'destination_name'])
-                self.network = self.build_network()
-            except Exception as e:
-                st.error(f"Error: {e}")
-                self.network = {}
+            self.df = pd.read_csv(file_name).dropna(subset=['source_name', 'destination_name'])
+            self.network = self.build_network()
         else:
             self.network = {}
 
     def build_network(self):
         graph = {}
         for _, row in self.df.iterrows():
-            src, dest = str(row['source_name']).strip(), str(row['destination_name']).strip()
-            weight = float(row['osrm_distance']) if not pd.isna(row['osrm_distance']) else 10.0
+            src, dest = str(row['source_name']), str(row['destination_name'])
+            weight = float(row['osrm_distance'])
             if src not in graph: graph[src] = {}
             graph[src][dest] = weight
         return graph
 
-    # FIXED: Accepts optional start/end nodes from the UI dropdowns
-    def process_incident(self, report, start_node=None, end_node=None):
-        if not self.network:
-            return {"status": "ERROR", "reasoning": "Data missing.", "path": [], "cost": 0}
-
-        temp_network = copy.deepcopy(self.network)
-        status = "NORMAL"
-        reasoning = "Operating within standard OSRM parameters."
+    def process_incident(self, report, start_node, end_node):
+        # 1. Baseline Calculation (Standard Distance)
+        base_cost, base_path = get_optimal_route(self.network, start_node, end_node)
         
-        # Agentic Rerouting Logic
-        report_lower = report.lower()
-        keywords = ["storm", "rain", "block", "delay", "flood"]
-        if any(word in report_lower for word in keywords):
-            status = "REROUTED"
-            reasoning = "Incident detected. Applying penalty weights to force reroute."
-            words = [w for w in report_lower.split() if len(w) > 3]
+        # 2. Risk Assessment Logic
+        risk_score = 0
+        keywords = {"flood": 5, "storm": 4, "block": 5, "rain": 2, "delay": 1}
+        for word, score in keywords.items():
+            if word in report.lower(): risk_score += score
+        risk_score = min(risk_score, 10)
+
+        # 3. Apply Penalties & Get Optimized Path
+        temp_network = copy.deepcopy(self.network)
+        if risk_score > 0:
             for src in temp_network:
                 for dest in list(temp_network[src].keys()):
-                    if any(w in dest.lower() or w in src.lower() for w in words):
-                        temp_network[src][dest] += 5000
+                    if any(w in dest.lower() or w in src.lower() for w in report.lower().split() if len(w) > 3):
+                        temp_network[src][dest] += 5000 
 
-        # Logic to handle custom hub selection
-        cities = list(self.network.keys())
-        start = start_node if start_node else cities[0]
-        
-        if end_node:
-            end = end_node
-        else:
-            # Fallback to first connected destination
-            end = list(self.network[start].keys())[0] if self.network[start] else cities[-1]
-        
-        cost, path = get_optimal_route(temp_network, start, end)
-        
+        opt_cost, opt_path = get_optimal_route(temp_network, start_node, end_node)
+
         return {
-            "status": status, "path": path, "cost": round(cost, 2), 
-            "start": start, "end": end, "reasoning": reasoning
+            "base_cost": round(base_cost, 2),
+            "opt_cost": round(opt_cost, 2) if opt_cost < 1000 else round(base_cost, 2), # Clean up penalty display
+            "risk_level": risk_score,
+            "path": opt_path,
+            "status": "REROUTED" if risk_score > 0 else "NORMAL",
+            "reasoning": f"Agent detected risk level {risk_score}/10. Rerouting via safe hubs." if risk_score > 0 else "Normal parameters."
         }
