@@ -2,39 +2,37 @@ import heapq
 
 def get_optimal_route(graph, start, end):
     """
-    Finds the shortest path between start and end nodes using Dijkstra's Algorithm.
-    This is a core Dynamic Programming approach for path optimization.
+    Core Optimization Engine: Dijkstra's Algorithm.
+    This provides the mathematical 'Action' for the Agentic AI.
     """
-    # If the start or end city isn't in our Delhivery dataset, return a fallback
+    # Safety Check: If nodes don't exist in our CSV data
     if start not in graph or end not in graph:
-        return 0, [start, end]
+        return 0, [start, "No viable path found in dataset"]
 
-    # distances stores the minimum distance to each node
+    # Initialize distances and priority queue
     distances = {node: float('infinity') for node in graph}
     distances[start] = 0
-    
-    # priority queue to store (distance, current_node, path)
     pq = [(0, start, [start])]
 
     while pq:
-        current_distance, current_node, path = heapq.heappop(pq)
+        (current_distance, current_node, path) = heapq.heappop(pq)
 
-        # If we reached the destination, return the result
+        # Optimization: If we found the target node
         if current_node == end:
             return current_distance, path
 
-        # If the distance in the queue is greater than the known shortest, skip
+        # If we found a longer path than already recorded, skip
         if current_distance > distances[current_node]:
             continue
 
-        # Check neighbors
+        # Explore neighbors (connected hubs)
         if current_node in graph:
             for neighbor, weight in graph[current_node].items():
                 distance = current_distance + weight
 
-                # If a shorter path to neighbor is found
+                # If this new path is shorter, record it and add to queue
                 if distance < distances[neighbor]:
                     distances[neighbor] = distance
                     heapq.heappush(pq, (distance, neighbor, path + [neighbor]))
 
-    return float('infinity'), []
+    return 0, [start, "Destination unreachable in current network"]
