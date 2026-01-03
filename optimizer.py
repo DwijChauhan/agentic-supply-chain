@@ -1,11 +1,10 @@
 import heapq
 
 def get_optimal_route(graph, start, end):
-    # If the start city isn't in our source list, we can't begin
     if start not in graph:
-        return 0, [start, "Source Not Found"]
+        return 0, [start, "Not found in dataset"]
 
-    # Initialize distances for EVERY node mentioned in the graph (source or dest)
+    # Initialize all reachable nodes with infinity
     distances = {node: float('inf') for node in graph}
     for nodes in graph.values():
         for neighbor in nodes:
@@ -16,18 +15,18 @@ def get_optimal_route(graph, start, end):
     pq = [(0, start, [start])]
 
     while pq:
-        current_distance, current_node, path = heapq.heappop(pq)
+        current_dist, current_node, path = heapq.heappop(pq)
 
         if current_node == end:
-            return current_distance, path
+            return current_dist, path
 
-        if current_distance > distances.get(current_node, float('inf')):
+        if current_dist > distances.get(current_node, float('inf')):
             continue
 
         for neighbor, weight in graph.get(current_node, {}).items():
-            distance = current_distance + weight
-            if distance < distances.get(neighbor, float('inf')):
-                distances[neighbor] = distance
-                heapq.heappush(pq, (distance, neighbor, path + [neighbor]))
+            dist = current_dist + weight
+            if dist < distances.get(neighbor, float('inf')):
+                distances[neighbor] = dist
+                heapq.heappush(pq, (dist, neighbor, path + [neighbor]))
 
-    return 0, [start, "No Connected Path Found"]
+    return 0, [start, "No direct or indirect connection found"]
