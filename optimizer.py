@@ -1,14 +1,10 @@
 import heapq
 
 def get_optimal_route(graph, start, end):
-    """
-    Finds the shortest path using Dijkstra's Algorithm with KeyError protection.
-    """
     if start not in graph:
-        return 0, [start, "Origin not in dataset"]
+        return 0, [start, "Origin not in network"]
 
-    # Initialize distances for all nodes found in the graph (sources and neighbors)
-    # This prevents the KeyError by ensuring every node has a 'float(inf)' starting distance.
+    # Initialize all potential nodes with infinity to prevent KeyErrors
     distances = {node: float('inf') for node in graph}
     for neighbors in graph.values():
         for neighbor in neighbors:
@@ -19,22 +15,19 @@ def get_optimal_route(graph, start, end):
     pq = [(0, start, [start])]
 
     while pq:
-        current_distance, current_node, path = heapq.heappop(pq)
+        curr_dist, curr_node, path = heapq.heappop(pq)
 
-        if current_node == end:
-            return current_distance, path
+        if curr_node == end:
+            return curr_dist, path
 
-        # Use .get() to safely check the current recorded distance
-        if current_distance > distances.get(current_node, float('inf')):
+        if curr_dist > distances.get(curr_node, float('inf')):
             continue
 
-        # Check neighbors safely
-        for neighbor, weight in graph.get(current_node, {}).items():
-            distance = current_distance + weight
-            
-            # Update distance if a shorter path is found
-            if distance < distances.get(neighbor, float('inf')):
-                distances[neighbor] = distance
-                heapq.heappush(pq, (distance, neighbor, path + [neighbor]))
+        # Use .get() to safely handle nodes that are destinations but not sources
+        for neighbor, weight in graph.get(curr_node, {}).items():
+            new_dist = curr_dist + weight
+            if new_dist < distances.get(neighbor, float('inf')):
+                distances[neighbor] = new_dist
+                heapq.heappush(pq, (new_dist, neighbor, path + [neighbor]))
 
-    return 0, [start, "No viable connection found"]
+    return 0, [start, "No connection found"]
