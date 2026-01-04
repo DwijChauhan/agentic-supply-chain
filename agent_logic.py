@@ -24,22 +24,22 @@ class SupplyChainAgent:
     def build_network(self):
         graph = {}
         for _, row in self.df.iterrows():
-            src, dest = str(row['source_name']).strip(), str(row['destination_name']).strip()
+            src = str(row['source_name']).strip()
+            dest = str(row['destination_name']).strip()
             weight = float(row['osrm_distance']) if not pd.isna(row['osrm_distance']) else 10.0
             if src not in graph: 
                 graph[src] = {}
             graph[src][dest] = weight
         return graph
 
-    # FIXED INDENTATION: This is now exactly aligned with build_network
     def process_incident(self, report, start_node, end_node):
         if not self.network:
-            return {"status": "ERROR", "reasoning": "Data missing.", "path": [], "cost": 0}
+            return {"status": "ERROR", "reasoning": "Data missing.", "path": [], "base_cost": 0, "opt_cost": 0, "risk_level": 0}
 
-        # Baseline: Standard distance
+        # 1. Baseline: Standard distance
         base_cost, _ = get_optimal_route(self.network, start_node, end_node)
         
-        # Risk Score Calculation
+        # 2. Risk Score Calculation
         risk_score = 0
         keywords = {"flood": 5, "storm": 4, "block": 5, "rain": 2, "delay": 1, "accident": 3}
         for word, score in keywords.items():
@@ -47,7 +47,7 @@ class SupplyChainAgent:
                 risk_score += score
         risk_score = min(risk_score, 10)
 
-        # Agentic Rerouting
+        # 3. Agentic Rerouting
         temp_network = copy.deepcopy(self.network)
         status = "NORMAL"
         if risk_score > 0:
@@ -62,9 +62,11 @@ class SupplyChainAgent:
 
         return {
             "base_cost": round(base_cost, 2),
-            "opt_cost": round(opt_cost, 2) if opt_cost < 1000 else round(base_cost, 2),
+            "opt_cost": round(opt_cost, 2),
             "risk_level": risk_score,
             "path": opt_path,
             "status": status,
-            "reasoning": f"Agent detected {risk_level}/10 risk factors." if risk_score > 0 else "Routes safe."
+            "start": start_node,
+            "end": end_node,
+            "reasoning": f"Agent detected {risk_score}/10 risk factors." if risk_score > 0 else "Routes safe."
         }
