@@ -8,6 +8,7 @@ def get_optimal_route(graph, start, end, penalties=None):
 
     # Initialize distances for all nodes in the network
     distances = {node: float('inf') for node in graph}
+    # Ensure all neighbor-only nodes are also in the distances dict
     for neighbors in graph.values():
         for neighbor in neighbors:
             distances.setdefault(neighbor, float('inf'))
@@ -25,8 +26,8 @@ def get_optimal_route(graph, start, end, penalties=None):
             continue
 
         for neighbor, weight in graph.get(curr_node, {}).items():
-            # Apply agentic penalty if the destination or source is risky
-            risk_penalty = penalties.get(neighbor, 0) + penalties.get(curr_node, 0)
+            # Apply agentic penalty if the destination node is marked as risky
+            risk_penalty = penalties.get(neighbor, 0)
             new_dist = curr_dist + weight + risk_penalty
             
             if new_dist < distances.get(neighbor, float('inf')):
